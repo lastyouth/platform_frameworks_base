@@ -1,4 +1,8 @@
 package com.android.server;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
@@ -238,6 +242,39 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 			if(isRegistered)
 			{
 				ret = mCurrentActivityRecord.getRealActivity();
+			}
+			try
+			{
+				MotionEvent p = MotionEvent.obtain(android.os.SystemClock.uptimeMillis(),android.os.SystemClock.uptimeMillis(),
+						MotionEvent.ACTION_DOWN,1.0f,250f,0);
+
+				Log.e(TAG,"Before MotionEvent : "+p);
+				ByteArrayOutputStream bo = new ByteArrayOutputStream();
+				ObjectOutputStream so = new ObjectOutputStream(bo);
+
+				so.writeObject(p);
+				//so.flush();
+				
+				bo.close();
+				so.close();
+
+				//String op = bo.toString();
+				//ret = op;
+				
+				byte b[] = bo.toByteArray();
+				
+				ByteArrayInputStream bi = new ByteArrayInputStream(b);
+				ObjectInputStream si = new ObjectInputStream(bi);
+				
+				MotionEvent re_p = (MotionEvent)si.readObject();
+				
+				Log.e(TAG,"After MotionEvent : "+re_p);
+			
+				bi.close();
+				si.close();
+			}catch(Exception e)
+			{
+				Log.e(TAG,"WTF : "+e.getMessage());
 			}
 		}
 		return ret;

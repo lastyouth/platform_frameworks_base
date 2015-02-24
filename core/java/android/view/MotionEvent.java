@@ -16,6 +16,8 @@
 
 package android.view;
 
+import java.io.Serializable;
+
 import android.graphics.Matrix;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -165,8 +167,18 @@ import android.util.SparseArray;
  * received an {@link #ACTION_UP} for the prior gesture.
  * </p>
  */
-public final class MotionEvent extends InputEvent implements Parcelable {
-    private static final long NS_PER_MS = 1000000;
+public final class MotionEvent extends InputEvent implements Parcelable,Serializable {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 128371287468712641L;
+
+	/**
+	 * 
+	 */
+	
+
+	private static final long NS_PER_MS = 1000000;
 
     /**
      * An invalid pointer id.
@@ -3165,8 +3177,12 @@ public final class MotionEvent extends InputEvent implements Parcelable {
      * Refer to {@link InputDevice} for information about how different kinds of
      * input devices and sources represent pointer coordinates.
      */
-    public static final class PointerCoords {
-        private static final int INITIAL_PACKED_AXIS_VALUES = 8;
+    public static final class PointerCoords implements Serializable{
+        /**
+		 * 
+		 */
+		private static final long serialVersionUID = 128371287468712642L;
+		private static final int INITIAL_PACKED_AXIS_VALUES = 8;
         private long mPackedAxisBits;
         private float[] mPackedAxisValues;
 
@@ -3462,8 +3478,13 @@ public final class MotionEvent extends InputEvent implements Parcelable {
      * Objects of this type can be used to specify the pointer id and tool type
      * when creating new {@link MotionEvent} objects and to query pointer properties in bulk.
      */
-    public static final class PointerProperties {
+    public static final class PointerProperties implements Serializable {
         /**
+		 * 
+		 */
+		private static final long serialVersionUID = 128371287468712643L;
+
+		/**
          * Creates a pointer properties object with an invalid pointer id.
          */
         public PointerProperties() {
