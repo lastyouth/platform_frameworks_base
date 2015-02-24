@@ -15,7 +15,7 @@
 
 namespace android{
 
-	static void com_android_server_DudiManagerService_setTargetActivityName(JNIEnv *env,jstring name)
+	static void com_android_server_DudiManagerService_setTargetActivityName(JNIEnv *env,jobject,jstring name)
 	{
 		sp<IServiceManager> sm = defaultServiceManager();
 	
