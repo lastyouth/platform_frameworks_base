@@ -26,16 +26,16 @@
 #define DEBUG_OUTBOUND_EVENT_DETAILS 0
 
 // Log debug messages about the dispatch cycle.
-#define DEBUG_DISPATCH_CYCLE 0
+#define DEBUG_DISPATCH_CYCLE 1
 
 // Log debug messages about registrations.
 #define DEBUG_REGISTRATION 0
 
 // Log debug messages about input event injection.
-#define DEBUG_INJECTION 0
+#define DEBUG_INJECTION 1
 
 // Log debug messages about input focus tracking.
-#define DEBUG_FOCUS 0
+#define DEBUG_FOCUS 1
 
 // Log debug messages about the app switch latency optimization.
 #define DEBUG_APP_SWITCH 0
@@ -362,7 +362,11 @@ void InputDispatcher::dispatchOnceInnerLocked(nsecs_t* nextWakeupTime) {
             dropReason = DROP_REASON_BLOCKED;
         }
         done = dispatchKeyLocked(currentTime, typedEntry, &dropReason, nextWakeupTime);
-        break;
+        if(!done)
+	{
+		
+	}
+	break;
     }
 
     case EventEntry::TYPE_MOTION: {
@@ -801,6 +805,7 @@ bool InputDispatcher::dispatchKeyLocked(nsecs_t currentTime, KeyEntry* entry,
     addMonitoringTargetsLocked(inputTargets);
 
     // Dispatch the key.
+    ALOGD("before dispatchEventLocked");
     dispatchEventLocked(currentTime, entry, inputTargets);
     return true;
 }
@@ -925,7 +930,7 @@ void InputDispatcher::dispatchEventLocked(nsecs_t currentTime,
             sp<Connection> connection = mConnectionsByFd.valueAt(connectionIndex);
             prepareDispatchCycleLocked(currentTime, connection, eventEntry, &inputTarget);
         } else {
-#if DEBUG_FOCUS
+#if 1 //#if DEBUG_FOCUS
             ALOGD("Dropping event delivery to target with channel '%s' because it "
                     "is no longer registered with the input dispatcher.",
                     inputTarget.inputChannel->getName().string());
@@ -1107,7 +1112,7 @@ Unresponsive:
     nsecs_t timeSpentWaitingForApplication = getTimeSpentWaitingForApplicationLocked(currentTime);
     updateDispatchStatisticsLocked(currentTime, entry,
             injectionResult, timeSpentWaitingForApplication);
-#if DEBUG_FOCUS
+#if 1
     ALOGD("findFocusedWindow finished: injectionResult=%d, "
             "timeSpentWaitingForApplication=%0.1fms",
             injectionResult, timeSpentWaitingForApplication / 1000000.0);

@@ -32,7 +32,8 @@ import android.view.WindowManager;
 
 import java.util.Arrays;
 
-final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
+//sbh modified -> public
+public final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
     private final WindowManagerService mService;
     
     // Current window with input focus for keys and other non-touch events.  May be null.
@@ -57,8 +58,12 @@ final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
     // is received to indicate that the input devices are ready.
     private final Object mInputDevicesReadyMonitor = new Object();
     private boolean mInputDevicesReady;
+    
+    //sbh
+    private final String TAG = "InputMonitor";
 
     public InputMonitor(WindowManagerService service) {
+        Log.i(TAG,"Owning : inputMonitor Spawned");
         mService = service;
     }
     
@@ -371,6 +376,12 @@ final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
     public long interceptKeyBeforeDispatching(
             InputWindowHandle focus, KeyEvent event, int policyFlags) {
         WindowState windowState = focus != null ? (WindowState) focus.windowState : null;
+        //sbh
+        if(windowState != null)
+        {
+        	//windowState.getAppToken().
+        	Log.i(TAG,"Owning : " + windowState.getOwningPackage()+" "+event+"policyFlag : "+policyFlags);
+        }
         return mService.mPolicy.interceptKeyBeforeDispatching(windowState, event, policyFlags);
     }
 
@@ -380,6 +391,12 @@ final class InputMonitor implements InputManagerService.WindowManagerCallbacks {
     public KeyEvent dispatchUnhandledKey(
             InputWindowHandle focus, KeyEvent event, int policyFlags) {
         WindowState windowState = focus != null ? (WindowState) focus.windowState : null;
+        //sbh
+        if(windowState != null)
+        {
+        	//windowState.getAppToken().
+        	Log.i(TAG,"Unhandled : " + windowState.getOwningPackage()+" "+event+"policyFlag : "+policyFlags);
+        }
         return mService.mPolicy.dispatchUnhandledKey(windowState, event, policyFlags);
     }
 

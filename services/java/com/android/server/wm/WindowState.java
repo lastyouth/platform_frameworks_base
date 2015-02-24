@@ -65,7 +65,8 @@ class WindowList extends ArrayList<WindowState> {
 /**
  * A window in the window manager.
  */
-final class WindowState implements WindowManagerPolicy.WindowState {
+//sbh modified
+public final class WindowState implements WindowManagerPolicy.WindowState {
     static final String TAG = "WindowState";
 
     final WindowManagerService mService;

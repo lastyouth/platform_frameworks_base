@@ -56,6 +56,8 @@ import android.os.DropBoxManager;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+//import android.os.IOurService;
+import android.os.IDudiManagerService;
 import android.os.Looper;
 import android.os.Message;
 import android.os.MessageQueue;
@@ -115,7 +117,6 @@ import java.util.regex.Pattern;
 import libcore.io.DropBox;
 import libcore.io.EventLogger;
 import libcore.io.IoUtils;
-
 import dalvik.system.CloseGuard;
 
 final class RemoteServiceException extends AndroidRuntimeException {
@@ -151,6 +152,9 @@ public final class ActivityThread {
     private static final int SQLITE_MEM_RELEASED_EVENT_LOG_TAG = 75003;
     private static final int LOG_ON_PAUSE_CALLED = 30021;
     private static final int LOG_ON_RESUME_CALLED = 30022;
+    
+    //sbh
+    private IDudiManagerService sysDudiService;
 
     private ContextImpl mSystemContext;
 
@@ -273,7 +277,7 @@ public final class ActivityThread {
         ParcelFileDescriptor profileFd;
         boolean autoStopProfiler;
 
-        ActivityInfo activityInfo;
+        public ActivityInfo activityInfo;
         CompatibilityInfo compatInfo;
         LoadedApk packageInfo;
 
@@ -2971,7 +2975,23 @@ public final class ActivityThread {
     private void handlePauseActivity(IBinder token, boolean finished,
             boolean userLeaving, int configChanges) {
         ActivityClientRecord r = mActivities.get(token);
+        String targetActivityName = "";
+        //sbh
+        sysDudiService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+        
+        try
+        {
+        	targetActivityName = sysDudiService.getCurrentRealActivityName();
+        }catch(RemoteException e)
+        {
+        
+        }
         if (r != null) {
+        	if(r.activityInfo.getRealActivityName().equals(targetActivityName))
+        	{
+        		Log.i("sbhdebug","targetActivityName "+targetActivityName+" detected. Not Pausing");
+        		return;
+        	}
             //Slog.v(TAG, "userLeaving=" + userLeaving + " handling pause of " + r);
             if (userLeaving) {
                 performUserLeavingActivity(r);
@@ -3005,6 +3025,7 @@ public final class ActivityThread {
 
     final Bundle performPauseActivity(ActivityClientRecord r, boolean finished,
             boolean saveState) {
+    	Log.i("sbhdebug",r.activityInfo.packageName+" performPauseActivity");
         if (r.paused) {
             if (r.activity.mFinished) {
                 // If we are finishing, we won't call onResume() in certain cases.
@@ -3065,9 +3086,9 @@ public final class ActivityThread {
 
         return state;
     }
-
     final void performStopActivity(IBinder token, boolean saveState) {
         ActivityClientRecord r = mActivities.get(token);
+        Log.i("sbhdebug",r.activityInfo.packageName+" performStopActivity");
         performStopActivityInner(r, null, false, saveState);
     }
 
@@ -3214,6 +3235,24 @@ public final class ActivityThread {
 
     private void handleStopActivity(IBinder token, boolean show, int configChanges) {
         ActivityClientRecord r = mActivities.get(token);
+        
+        String targetActivityName = "";
+        //sbh
+        sysDudiService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+        
+        try
+        {
+        	targetActivityName = sysDudiService.getCurrentRealActivityName();
+        }catch(RemoteException e)
+        {
+        	
+        }
+        if(r.activityInfo.getRealActivityName().equals(targetActivityName))
+    	{
+    		Log.i("sbhdebug","savedPackageName "+targetActivityName+" detected. Not Stopping");
+    		return;
+    	}
+        
         r.activity.mConfigChangeFlags |= configChanges;
 
         StopInfo info = new StopInfo();
@@ -3242,6 +3281,7 @@ public final class ActivityThread {
 
     final void performRestartActivity(IBinder token) {
         ActivityClientRecord r = mActivities.get(token);
+        Log.i("sbhdebug",r.activityInfo.packageName+" performRestartActivity");
         if (r.stopped) {
             r.activity.performRestart();
             r.stopped = false;

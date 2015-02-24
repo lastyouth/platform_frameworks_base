@@ -55,7 +55,7 @@ import java.util.HashSet;
 /**
  * An entry in the history stack, representing an activity.
  */
-final class ActivityRecord {
+public final class ActivityRecord {
     static final String TAG = ActivityManagerService.TAG;
     static final boolean DEBUG_SAVED_STATE = ActivityStackSupervisor.DEBUG_SAVED_STATE;
     final public static String RECENTS_PACKAGE_NAME = "com.android.systemui.recent";
@@ -113,6 +113,7 @@ final class ActivityRecord {
     ActivityOptions pendingOptions; // most recently given options
     HashSet<ConnectionRecord> connections; // All ConnectionRecord we hold
     UriPermissionOwner uriPermissions; // current special URI access perms.
+  
     ProcessRecord app;      // if non-null, hosting application
     ActivityState state;    // current state we are in
     Bundle  icicle;         // last saved activity state
@@ -126,7 +127,7 @@ final class ActivityRecord {
     int configChangeFlags;  // which config values have changed
     boolean keysPaused;     // has key dispatching been paused for it?
     int launchMode;         // the launch mode activity attribute.
-    boolean visible;        // does this activity's window need to be shown?
+    public boolean visible;        // does this activity's window need to be shown?
     boolean sleeping;       // have we told the activity to sleep?
     boolean waitingVisible; // true if waiting for a new act to become vis
     boolean nowVisible;     // is this activity's window visible?
@@ -1063,4 +1064,92 @@ final class ActivityRecord {
         stringName = sb.toString();
         return toString();
     }
+    //sbh added proper getter
+	public String getLaunchedFromPackage() {
+		return launchedFromPackage;
+	}
+
+	public String getPackageName() {
+		return packageName;
+	}
+
+	public String getProcessName() {
+		return processName;
+	}
+
+	public boolean isFullscreen() {
+		return fullscreen;
+	}
+
+	public boolean isNoDisplay() {
+		return noDisplay;
+	}
+
+	public int getmActivityType() {
+		return mActivityType;
+	}
+
+	public String getBaseDir() {
+		return baseDir;
+	}
+
+	public String getDataDir() {
+		return dataDir;
+	}
+
+	public TaskRecord getTask() {
+		return task;
+	}
+
+	public ActivityRecord getResultTo() {
+		return resultTo;
+	}
+
+	public String getState() {
+		return ActivityStack.stateToString(state);
+	}
+
+	public boolean isStopped() {
+		return stopped;
+	}
+
+	public boolean isFinishing() {
+		return finishing;
+	}
+
+	public boolean isKeysPaused() {
+		return keysPaused;
+	}
+
+	public boolean isVisible() {
+		return visible;
+	}
+
+	public boolean isWaitingVisible() {
+		return waitingVisible;
+	}
+
+	public boolean isNowVisible() {
+		return nowVisible;
+	}
+
+	public boolean isIdle() {
+		return idle;
+	}
+
+	public int getLaunchedFromUid() {
+		return launchedFromUid;
+	}
+
+	public String getRealActivity() {
+		
+		return realActivity.flattenToString();
+	}
+	public String getActivityClassName(){
+		return info.name;
+	}
+
+	public IApplicationToken.Stub getAppToken() {
+		return appToken;
+	}
 }

@@ -47,6 +47,7 @@ import android.os.Parcelable;
 import android.os.RemoteException;
 import android.os.StrictMode;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**

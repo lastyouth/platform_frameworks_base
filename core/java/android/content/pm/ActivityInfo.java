@@ -602,6 +602,14 @@ public class ActivityInfo extends ComponentInfo
         dest.writeInt(uiOptions);
         dest.writeString(parentActivityName);
     }
+    //sbh added
+    public String getRealActivityName()
+    {
+    	//sbh
+    	String realActivityName;
+    	realActivityName = String.format("%s/%s", packageName,name);
+    	return realActivityName;
+    }
 
     public static final Parcelable.Creator<ActivityInfo> CREATOR
             = new Parcelable.Creator<ActivityInfo>() {

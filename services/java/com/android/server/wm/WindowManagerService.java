@@ -17,11 +17,8 @@
 package com.android.server.wm;
 
 import static android.view.WindowManager.LayoutParams.*;
-
 import static com.android.server.am.ActivityStackSupervisor.HOME_STACK_ID;
-
 import static android.view.WindowManagerPolicy.FINISH_LAYOUT_REDO_WALLPAPER;
-
 import android.app.AppOpsManager;
 import android.util.TimeUtils;
 import android.view.IWindowId;
@@ -74,6 +71,7 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.IDudiManagerService;
 import android.os.IRemoteCallback;
 import android.os.Looper;
 import android.os.Message;
@@ -160,17 +158,18 @@ public class WindowManagerService extends IWindowManager.Stub
     static final String TAG = "WindowManager";
     static final boolean DEBUG = false;
     static final boolean DEBUG_ADD_REMOVE = false;
-    static final boolean DEBUG_FOCUS = false;
+    static final boolean DEBUG_FOCUS = true;
     static final boolean DEBUG_FOCUS_LIGHT = DEBUG_FOCUS || false;
     static final boolean DEBUG_ANIM = false;
     static final boolean DEBUG_LAYOUT = false;
     static final boolean DEBUG_RESIZE = false;
     static final boolean DEBUG_LAYERS = false;
-    static final boolean DEBUG_INPUT = false;
-    static final boolean DEBUG_INPUT_METHOD = false;
-    static final boolean DEBUG_VISIBILITY = false;
-    static final boolean DEBUG_WINDOW_MOVEMENT = false;
-    static final boolean DEBUG_TOKEN_MOVEMENT = false;
+    //sbh
+    static final boolean DEBUG_INPUT = true;
+    static final boolean DEBUG_INPUT_METHOD = true;
+    static final boolean DEBUG_VISIBILITY = true;
+    static final boolean DEBUG_WINDOW_MOVEMENT = true;
+    static final boolean DEBUG_TOKEN_MOVEMENT = true;
     static final boolean DEBUG_ORIENTATION = false;
     static final boolean DEBUG_APP_ORIENTATION = false;
     static final boolean DEBUG_CONFIGURATION = false;
@@ -3313,8 +3312,8 @@ public class WindowManagerService extends IWindowManager.Stub
     boolean okToDisplay() {
         return !mDisplayFrozen && mDisplayEnabled && mPolicy.isScreenOnFully();
     }
-
-    AppWindowToken findAppWindowToken(IBinder token) {
+    //sbh
+    public AppWindowToken findAppWindowToken(IBinder token) {
         WindowToken wtoken = mTokenMap.get(token);
         if (wtoken == null) {
             return null;
@@ -3812,7 +3811,8 @@ public class WindowManagerService extends IWindowManager.Stub
         synchronized(mWindowMap) {
             boolean changed = false;
             if (token == null) {
-                if (DEBUG_FOCUS_LIGHT) Slog.v(TAG, "Clearing focused app, was " + mFocusedApp);
+            	//sbh -> true
+                if (DEBUG_FOCUS_LIGHT || true) Slog.v(TAG, "Clearing focused app, was " + mFocusedApp);
                 changed = mFocusedApp != null;
                 mFocusedApp = null;
                 if (changed) {
@@ -3825,7 +3825,8 @@ public class WindowManagerService extends IWindowManager.Stub
                     return;
                 }
                 changed = mFocusedApp != newFocus;
-                if (DEBUG_FOCUS_LIGHT) Slog.v(TAG, "Set focused app to: " + newFocus
+                //sbh -> true
+                if (DEBUG_FOCUS_LIGHT||true) Slog.v(TAG, "Set focused app to: " + newFocus
                         + " old focus=" + mFocusedApp + " moveFocusNow=" + moveFocusNow);
                 mFocusedApp = newFocus;
                 if (changed) {
@@ -3839,6 +3840,97 @@ public class WindowManagerService extends IWindowManager.Stub
                 Binder.restoreCallingIdentity(origId);
             }
         }
+    }
+    //sbh customized
+    public void sbhSetFocusedApp(IBinder token, WindowState target)
+    {
+    	synchronized(mWindowMap) {
+            boolean changed = false;
+            if (token == null) {
+            	return;
+            } else {
+                AppWindowToken newFocus = findAppWindowToken(token);
+                if (newFocus == null) {
+                    Slog.w(TAG, "Attempted to set focus to non-existing app token: " + token);
+                    return;
+                }
+                changed = mFocusedApp != newFocus;
+                //sbh -> true
+                if (DEBUG_FOCUS_LIGHT||true) Slog.v(TAG, "Set focused app to: " + newFocus
+                        + " old focus=" + mFocusedApp + " moveFocusNow= true");
+                mFocusedApp = newFocus;
+                if (changed) {
+                    mInputMonitor.setFocusedAppLw(newFocus);
+                }
+            }
+
+            if (changed) {
+                final long origId = Binder.clearCallingIdentity();
+                sbhUpdateFocusedWindowLocked(UPDATE_FOCUS_NORMAL, true /*updateInputWindows*/,target);
+                Binder.restoreCallingIdentity(origId);
+            }
+        }
+    }
+    //sbh customized
+    private boolean sbhUpdateFocusedWindowLocked(int mode, boolean updateInputWindows,WindowState target) {
+        WindowState newFocus = target;
+        Log.i(WindowManagerService.TAG,"newFocus : "+newFocus+" currentFocus : "+mCurrentFocus);
+        if (mCurrentFocus != newFocus) {
+            Trace.traceBegin(Trace.TRACE_TAG_WINDOW_MANAGER, "wmUpdateFocus");
+            // This check makes sure that we don't already have the focus
+            // change message pending.
+            mH.removeMessages(H.REPORT_FOCUS_CHANGE);
+            mH.sendEmptyMessage(H.REPORT_FOCUS_CHANGE);
+            // TODO(multidisplay): Focused windows on default display only.
+            /*final DisplayContent displayContent = getDefaultDisplayContentLocked();
+            final boolean imWindowChanged = moveInputMethodWindowsIfNeededLocked(
+                    mode != UPDATE_FOCUS_WILL_ASSIGN_LAYERS
+                            && mode != UPDATE_FOCUS_WILL_PLACE_SURFACES);
+            if (imWindowChanged) {
+                displayContent.layoutNeeded = true;
+                newFocus = computeFocusedWindowLocked();
+            }*/
+
+            Slog.e(TAG, "Changing focus from " +
+                    mCurrentFocus + " to " + newFocus + " Callers=" + Debug.getCallers(4));
+            final WindowState oldFocus = mCurrentFocus;
+            mCurrentFocus = newFocus;
+            mLosingFocus.remove(newFocus);
+            int focusChanged = mPolicy.focusChangedLw(oldFocus, newFocus);
+            
+            // this will change the focus
+            finishUpdateFocusedWindowAfterAssignLayersLocked(true);
+
+            /*if (imWindowChanged && oldFocus != mInputMethodWindow) {
+                // Focus of the input method window changed. Perform layout if needed.
+                if (mode == UPDATE_FOCUS_PLACING_SURFACES) {
+                    performLayoutLockedInner(displayContent, true initial, updateInputWindows);
+                    focusChanged &= ~WindowManagerPolicy.FINISH_LAYOUT_REDO_LAYOUT;
+                } else if (mode == UPDATE_FOCUS_WILL_PLACE_SURFACES) {
+                    // Client will do the layout, but we need to assign layers
+                    // for handleNewWindowLocked() below.
+                    assignLayersLocked(displayContent.getWindowList());
+                }
+            }
+
+            if ((focusChanged & WindowManagerPolicy.FINISH_LAYOUT_REDO_LAYOUT) != 0) {
+                // The change in focus caused us to need to do a layout.  Okay.
+                displayContent.layoutNeeded = true;
+                if (mode == UPDATE_FOCUS_PLACING_SURFACES) {
+                    performLayoutLockedInner(displayContent, true , updateInputWindows);
+                }
+            }*/
+
+            /*if (mode != UPDATE_FOCUS_WILL_ASSIGN_LAYERS) {
+                // If we defer assigning layers, then the caller is responsible for
+                // doing this part.
+                finishUpdateFocusedWindowAfterAssignLayersLocked(updateInputWindows);
+            }
+
+            Trace.traceEnd(Trace.TRACE_TAG_WINDOW_MANAGER);*/
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -7556,6 +7648,19 @@ public class WindowManagerService extends IWindowManager.Stub
 
     @Override
     public boolean inputMethodClientHasFocus(IInputMethodClient client) {
+    	try
+    	{
+    		IDudiManagerService sysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+    		
+    		if(sysService.isTargetAcquiringFocus())
+    		{
+    			Slog.e(TAG, "Target is acquiring Focus now, ignore inputMethodClient..");
+    			return true;
+    		}
+    	}catch(RemoteException e)
+    	{
+    		
+    	}
         synchronized (mWindowMap) {
             // The focus for the client is the window immediately below
             // where we would place the input method window.
@@ -9757,6 +9862,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
     private boolean updateFocusedWindowLocked(int mode, boolean updateInputWindows) {
         WindowState newFocus = computeFocusedWindowLocked();
+        Log.i(WindowManagerService.TAG,"newFocus : "+newFocus+" currentFocus : "+mCurrentFocus);
         if (mCurrentFocus != newFocus) {
             Trace.traceBegin(Trace.TRACE_TAG_WINDOW_MANAGER, "wmUpdateFocus");
             // This check makes sure that we don't already have the focus
@@ -10877,5 +10983,10 @@ public class WindowManagerService extends IWindowManager.Stub
     @Override
     public Object getWindowManagerLock() {
         return mWindowMap;
+    }
+    //sbh
+    public InputManagerService getInputManagerService()
+    {
+    	return mInputManager;
     }
 }

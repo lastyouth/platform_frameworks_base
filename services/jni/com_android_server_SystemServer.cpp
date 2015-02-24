@@ -18,10 +18,11 @@
 #include <JNIHelp.h>
 
 #include <sensorservice/SensorService.h>
-
+#include <dudilowmanagerservice/DudiLowManagerService.h>
 #include <cutils/properties.h>
 #include <utils/Log.h>
 #include <utils/misc.h>
+
 
 namespace android {
 
@@ -32,6 +33,7 @@ static void android_server_SystemServer_nativeInit(JNIEnv* env, jobject clazz) {
         // Start the sensor service
         SensorService::instantiate();
     }
+	DudiLowManagerService::instantiate();
 }
 
 /*

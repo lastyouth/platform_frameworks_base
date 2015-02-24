@@ -24,12 +24,11 @@ import static com.android.internal.util.XmlUtils.writeLongAttribute;
 import static com.android.server.Watchdog.NATIVE_STACKS_OF_INTEREST;
 import static org.xmlpull.v1.XmlPullParser.END_DOCUMENT;
 import static org.xmlpull.v1.XmlPullParser.START_TAG;
-
 import static com.android.server.am.ActivityStackSupervisor.HOME_STACK_ID;
-
 import android.app.AppOpsManager;
 import android.appwidget.AppWidgetManager;
 import android.util.ArrayMap;
+
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IAppOpsService;
@@ -54,11 +53,11 @@ import com.android.server.pm.UserManagerService;
 import com.android.server.wm.AppTransition;
 import com.android.server.wm.StackBox;
 import com.android.server.wm.WindowManagerService;
+import com.android.server.wm.WindowState;
 import com.google.android.collect.Lists;
 import com.google.android.collect.Maps;
 
 import dalvik.system.Zygote;
-
 import libcore.io.IoUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -205,7 +204,7 @@ public final class ActivityManagerService extends ActivityManagerNative
     private static final String USER_DATA_DIR = "/data/user/";
     static final String TAG = "ActivityManager";
     static final String TAG_MU = "ActivityManagerServiceMU";
-    static final boolean DEBUG = false;
+    static final boolean DEBUG = true;
     static final boolean localLOGV = DEBUG;
     static final boolean DEBUG_BACKUP = localLOGV || false;
     static final boolean DEBUG_BROADCAST = localLOGV || false;
@@ -328,6 +327,7 @@ public final class ActivityManagerService extends ActivityManagerNative
 
     /** Run all ActivityStacks through this */
     ActivityStackSupervisor mStackSupervisor;
+    
 
     public IntentFirewall mIntentFirewall;
 
@@ -342,6 +342,7 @@ public final class ActivityManagerService extends ActivityManagerNative
      * Description of a request to start a new activity, which has been held
      * due to app switches being disabled.
      */
+	
     static class PendingActivityLaunch {
         final ActivityRecord r;
         final ActivityRecord sourceRecord;
@@ -2222,14 +2223,26 @@ public final class ActivityManagerService extends ActivityManagerNative
         }
         return mAppBindArgs;
     }
-
-    final void setFocusedActivityLocked(ActivityRecord r) {
+    //sbh modified -> public
+    public final void setFocusedActivityLocked(ActivityRecord r) {
         if (mFocusedActivity != r) {
             if (DEBUG_FOCUS) Slog.d(TAG, "setFocusedActivityLocked: r=" + r);
             mFocusedActivity = r;
             mStackSupervisor.setFocusedStack(r);
             if (r != null) {
                 mWindowManager.setFocusedApp(r.appToken, true);
+            }
+            applyUpdateLockStateLocked(r);
+        }
+    }
+    //sbh customized
+    public final void sbhSetFocusedActivityLocked(ActivityRecord r,WindowState target) {
+        if (mFocusedActivity != r) {
+            Slog.d(TAG, "setFocusedActivityLocked: r=" + r);
+            mFocusedActivity = r;
+            mStackSupervisor.setFocusedStack(r);
+            if (r != null) {
+                mWindowManager.sbhSetFocusedApp(r.appToken, target);
             }
             applyUpdateLockStateLocked(r);
         }
@@ -5219,6 +5232,8 @@ public final class ActivityManagerService extends ActivityManagerNative
         synchronized(this) {
             ActivityStack stack = ActivityRecord.getStackLocked(token);
             if (stack != null) {
+            	ActivityRecord r = ActivityRecord.isInStackLocked(token);
+            	Log.i("sbhdebug", r.packageName + " activityResumed");
                 ActivityRecord.activityResumedLocked(token);
             }
         }
@@ -5231,6 +5246,8 @@ public final class ActivityManagerService extends ActivityManagerNative
         synchronized(this) {
             ActivityStack stack = ActivityRecord.getStackLocked(token);
             if (stack != null) {
+            	ActivityRecord r = ActivityRecord.isInStackLocked(token);
+            	Log.i("sbhdebug", r.packageName + " activityPaused");
                 stack.activityPausedLocked(token, false);
             }
         }
@@ -5249,12 +5266,15 @@ public final class ActivityManagerService extends ActivityManagerNative
         }
 
         ActivityRecord r = null;
+       
 
         final long origId = Binder.clearCallingIdentity();
 
         synchronized (this) {
             r = ActivityRecord.isInStackLocked(token);
             if (r != null) {
+            	
+            	Log.i("sbhdebug", r.packageName + " activityStopped");
                 r.task.stack.activityStoppedLocked(r, icicle, thumbnail, description);
             }
         }
@@ -16622,4 +16642,15 @@ public final class ActivityManagerService extends ActivityManagerNative
         info.applicationInfo = getAppInfoForUser(info.applicationInfo, userId);
         return info;
     }
+    //sbh
+    public ActivityStackSupervisor getSupervisor()
+    {
+    	return mStackSupervisor;
+    }
+    //sbh
+    public WindowManagerService getWindowManagerService()
+    {
+    	return mWindowManager;
+    }
+    
 }

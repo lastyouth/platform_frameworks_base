@@ -161,6 +161,8 @@ LOCAL_SRC_FILES += \
 	core/java/android/os/IUpdateLock.aidl \
 	core/java/android/os/IUserManager.aidl \
 	core/java/android/os/IVibratorService.aidl \
+	core/java/android/os/IDudiManagerService.aidl \
+	core/java/android/os/IDudiFloatService.aidl \
 	core/java/android/service/notification/INotificationListener.aidl \
 	core/java/android/print/ILayoutResultCallback.aidl \
 	core/java/android/print/IPrinterDiscoveryObserver.aidl \
@@ -287,7 +289,7 @@ LOCAL_JAVA_LIBRARIES := bouncycastle conscrypt core core-junit ext okhttp
 
 LOCAL_MODULE := framework-base
 
-LOCAL_JAR_EXCLUDE_FILES := none
+LOCAL_JAR_EXCLUDE_FILES := ../../out/target/common/obj/JAVA_LIBRARIES/services_intermediates/classes-full-debug.jar
 
 include $(BUILD_STATIC_JAVA_LIBRARY)
 
@@ -939,7 +941,7 @@ ext_dirs := \
 	../../external/nist-sip/java \
 	../../external/apache-http/src \
 	../../external/tagsoup/src \
-	../../external/libphonenumber/java/src
+	../../external/libphonenumber/java/src \
 
 ext_src_files := $(call all-java-files-under,$(ext_dirs))
 

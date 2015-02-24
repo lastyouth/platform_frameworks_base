@@ -18,6 +18,7 @@ package android.app;
 
 import android.util.ArrayMap;
 import android.util.SuperNotCalledException;
+
 import com.android.internal.app.ActionBarImpl;
 import com.android.internal.policy.PolicyManager;
 
@@ -46,9 +47,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.IOurService;
 import android.os.Looper;
 import android.os.Parcelable;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.StrictMode;
 import android.os.UserHandle;
 import android.text.Selection;
@@ -678,7 +681,8 @@ public class Activity extends ContextThemeWrapper
     private Application mApplication;
     /*package*/ Intent mIntent;
     private ComponentName mComponent;
-    /*package*/ ActivityInfo mActivityInfo;
+    //sbh
+    public /*package*/ ActivityInfo mActivityInfo;
     /*package*/ ActivityThread mMainThread;
     Activity mParent;
     boolean mCalled;
@@ -883,6 +887,15 @@ public class Activity extends ContextThemeWrapper
      * @see #onPostCreate
      */
     protected void onCreate(Bundle savedInstanceState) {
+    	/*if(ActivityManagerService.self().insertActivityWithName(this.getRealActivityName(), this))
+    	{
+    		Log.i("sbhtouchevent","OnCreate : "+ getRealActivityName() + " Succeed to insert Activity Object");
+    	}
+    	else
+    	{
+    		Log.e("sbhtouchevent","OnCreate : "+ getRealActivityName() + " Fail to insert Activity Object");
+    	}*/
+    	
         if (DEBUG_LIFECYCLE) Slog.v(TAG, "onCreate " + this + ": " + savedInstanceState);
         if (mLastNonConfigurationInstances != null) {
             mAllLoaderManagers = mLastNonConfigurationInstances.loaders;
@@ -1420,6 +1433,14 @@ public class Activity extends ContextThemeWrapper
      * @see #isFinishing
      */
     protected void onDestroy() {
+    	/*if(ActivityManagerService.self().deleteActivityWithName(this.getRealActivityName()))
+    	{
+    		Log.i("sbhtouchevent","OnCreate : "+ getRealActivityName() + " Succeed to delete Activity Object");
+    	}
+    	else
+    	{
+    		Log.e("sbhtouchevent","OnCreate : "+ getRealActivityName() + " Fail to delete Activity Object");
+    	}*/
         if (DEBUG_LIFECYCLE) Slog.v(TAG, "onDestroy " + this);
         mCalled = true;
 
@@ -2414,14 +2435,29 @@ public class Activity extends ContextThemeWrapper
      */
     public boolean dispatchKeyEvent(KeyEvent event) {
         onUserInteraction();
+        //sbh inserted
+        Log.i("sbhtouchevent",this.getRealActivityName() + " event "+event+" Arrived");
         Window win = getWindow();
         if (win.superDispatchKeyEvent(event)) {
+        	Log.i("sbhtouchevent",this.getRealActivityName() + " event "+event+" consumed");
             return true;
         }
         View decor = mDecor;
         if (decor == null) decor = win.getDecorView();
-        return event.dispatch(this, decor != null
-                ? decor.getKeyDispatcherState() : null, this);
+        
+        boolean flags = event.dispatch(this, decor != null
+                ? decor.getKeyDispatcherState() : null, this); 
+        
+        if(flags)
+        {
+        	Log.i("sbhtouchevent",this.getRealActivityName() + " event "+event+" consumed");
+        }
+        else
+        {
+        	Log.e("sbhtouchevent",this.getRealActivityName() + " event "+event+" NOT consumed");
+        }
+        
+        return flags;
     }
 
     /**
@@ -2452,13 +2488,24 @@ public class Activity extends ContextThemeWrapper
      * @return boolean Return true if this event was consumed.
      */
     public boolean dispatchTouchEvent(MotionEvent ev) {
+    	
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
             onUserInteraction();
         }
         if (getWindow().superDispatchTouchEvent(ev)) {
+        	Log.i("sbhtouchevent",this.getRealActivityName() + " event "+ev+" consumed");
             return true;
         }
-        return onTouchEvent(ev);
+        boolean flags = onTouchEvent(ev);
+        if(flags)
+        {
+        	Log.i("sbhtouchevent",this.getRealActivityName() + " event "+ev+" consumed");
+        }
+        else
+        {
+        	Log.e("sbhtouchevent",this.getRealActivityName() + " event "+ev+" NOT consumed");
+        }
+        return flags;
     }
     
     /**
@@ -5451,5 +5498,10 @@ public class Activity extends ContextThemeWrapper
          * @see Activity#convertToTranslucent(TranslucentConversionListener)
          */
         public void onTranslucentConversionComplete(boolean drawComplete);
+    }
+    //sbh added
+    public String getRealActivityName()
+    {
+    	return mActivityInfo.getRealActivityName();
     }
 }

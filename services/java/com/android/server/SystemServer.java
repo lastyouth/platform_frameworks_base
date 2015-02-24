@@ -816,6 +816,14 @@ class ServerThread {
                     reportWtf("starting MediaRouterService", e);
                 }
             }
+            try{
+            	Slog.i(TAG, "DudiManagerService");
+            	DudiManagerService ours = new DudiManagerService(context);
+            	ServiceManager.addService("DudiManagerService", ours);
+            }catch(Throwable e)
+            {
+            	Slog.e(TAG, "Failure starting OurService Service",e);
+            }
         }
 
         // Before things start rolling, be sure we have decided whether

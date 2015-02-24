@@ -18,7 +18,8 @@ LOCAL_SRC_FILES:= \
     com_android_server_location_GpsLocationProvider.cpp \
     com_android_server_location_FlpHardwareProvider.cpp \
     com_android_server_connectivity_Vpn.cpp \
-    onload.cpp
+    com_android_server_DudiManagerService.cpp \
+    onload.cpp 
 
 LOCAL_C_INCLUDES += \
     $(JNI_H_INCLUDE) \
@@ -45,6 +46,7 @@ LOCAL_SHARED_LIBRARIES := \
     libinput \
     libinputservice \
     libsensorservice \
+	libdudilowmanagerservice \
     libskia \
     libgui \
     libusbhost \

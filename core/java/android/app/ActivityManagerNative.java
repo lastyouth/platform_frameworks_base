@@ -16,6 +16,7 @@
 
 package android.app;
 
+import android.app.ActivityManagerNative;
 import android.app.ActivityManager.StackBoxInfo;
 import android.content.ComponentName;
 import android.content.IIntentReceiver;
@@ -47,6 +48,7 @@ import android.util.Log;
 import android.util.Singleton;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /** {@hide} */
@@ -56,6 +58,7 @@ public abstract class ActivityManagerNative extends Binder implements IActivityM
      * Cast a Binder object into an activity manager interface, generating
      * a proxy if needed.
      */
+	
     static public IActivityManager asInterface(IBinder obj) {
         if (obj == null) {
             return null;

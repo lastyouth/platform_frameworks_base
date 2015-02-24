@@ -39,7 +39,8 @@ class AppTokenList extends ArrayList<AppWindowToken> {
  * Version of WindowToken that is specifically for a particular application (or
  * really activity) that is displaying windows.
  */
-class AppWindowToken extends WindowToken {
+//sbh modified 20150209 default -> public
+public class AppWindowToken extends WindowToken {
     // Non-null only for application tokens.
     final IApplicationToken appToken;
 
@@ -214,8 +215,8 @@ class AppWindowToken extends WindowToken {
             service.mH.sendMessage(m);
         }
     }
-
-    WindowState findMainWindow() {
+    //sbh modified default->public
+    public WindowState findMainWindow() {
         int j = windows.size();
         while (j > 0) {
             j--;

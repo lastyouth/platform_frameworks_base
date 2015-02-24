@@ -107,6 +107,8 @@ public final class ActivityStackSupervisor {
     static final int RESUME_TOP_ACTIVITY_MSG = FIRST_SUPERVISOR_STACK_MSG + 2;
     static final int SLEEP_TIMEOUT_MSG = FIRST_SUPERVISOR_STACK_MSG + 3;
     static final int LAUNCH_TIMEOUT_MSG = FIRST_SUPERVISOR_STACK_MSG + 4;
+    //sbh added
+    static public final int REFRESH_STACK_STATE = 200;
 
     // For debugging to make sure the caller when acquiring/releasing our
     // wake lock is the system process.
@@ -115,7 +117,7 @@ public final class ActivityStackSupervisor {
     final ActivityManagerService mService;
     final Context mContext;
     final Looper mLooper;
-
+    //sbh default->public
     final ActivityStackSupervisorHandler mHandler;
 
     /** Short cut */
@@ -235,7 +237,6 @@ public final class ActivityStackSupervisor {
             mWindowManager.dismissKeyguard();
         }
     }
-
     ActivityStack getFocusedStack() {
         if (mFocusedStack == null) {
             return mHomeStack;
@@ -250,7 +251,6 @@ public final class ActivityStackSupervisor {
                 return mFocusedStack;
         }
     }
-
     ActivityStack getLastStack() {
         switch (mStackState) {
             case STACK_STATE_HOME_IN_FRONT:
@@ -281,8 +281,8 @@ public final class ActivityStackSupervisor {
         moveHomeStack(true);
         mHomeStack.moveHomeTaskToTop();
     }
-
-    boolean resumeHomeActivity(ActivityRecord prev) {
+    //sbh modified -> public
+    public boolean resumeHomeActivity(ActivityRecord prev) {
         moveHomeToTop();
         if (prev != null) {
             prev.task.mOnTopOfHome = false;
@@ -464,11 +464,26 @@ public final class ActivityStackSupervisor {
             if (!isFrontStack(stack) && stack.mResumedActivity != null) {
                 if (DEBUG_STATES) Slog.d(TAG, "pauseBackStacks: stack=" + stack +
                         " mResumedActivity=" + stack.mResumedActivity);
+               
                 stack.startPausingLocked(userLeaving, false);
                 someActivityPaused = true;
             }
         }
         return someActivityPaused;
+    }
+    //sbh add
+    public void pauseForReregisteration(ActivityRecord target)
+    {
+    	for (int stackNdx = mStacks.size() - 1; stackNdx >= 0; --stackNdx) 
+    	{
+            final ActivityStack stack = mStacks.get(stackNdx);
+              
+            if(stack.isInStackLocked(target.getAppToken()) != null)
+            {
+            	stack.mResumedActivity = target;
+            	stack.startPausingLocked(false, false);
+            }
+        }
     }
 
     boolean allPausedActivitiesComplete() {
@@ -517,8 +532,8 @@ public final class ActivityStackSupervisor {
         }
         mService.notifyAll();
     }
-
-    ActivityRecord topRunningActivityLocked() {
+    //sbh 2015-1-26 protected -> public
+    public ActivityRecord topRunningActivityLocked() {
         final ActivityStack focusedStack = getFocusedStack();
         ActivityRecord r = focusedStack.topRunningActivityLocked(null);
         if (r != null) {
@@ -535,6 +550,18 @@ public final class ActivityStackSupervisor {
             }
         }
         return null;
+    }
+    //sbh 2015-01-27 added
+    public ArrayList<TaskRecord> getAllTaskFromNormalStacks()
+    {
+    	ArrayList<TaskRecord> ret = new ArrayList<TaskRecord>();
+    	for(int i=0;i<mStacks.size();i++)
+    	{
+    		ActivityStack as = mStacks.get(i);
+    		
+    		ret.addAll(as.getAllTasks());
+    	}
+    	return ret;
     }
 
     ActivityRecord getTasksLocked(int maxNum, IThumbnailReceiver receiver,
@@ -2027,15 +2054,21 @@ public final class ActivityStackSupervisor {
     boolean resumeTopActivitiesLocked(ActivityStack targetStack, ActivityRecord target,
             Bundle targetOptions) {
         if (targetStack == null) {
+        	//sbh
+        	Slog.i("resumeTopActivitiesLocked","targetStack is null, using focused stack instead");
             targetStack = getFocusedStack();
         }
+        Slog.i("resumeTopActivitiesLocked","targetStack is "+targetStack.toString());
         boolean result = false;
         for (int stackNdx = mStacks.size() - 1; stackNdx >= 0; --stackNdx) {
             final ActivityStack stack = mStacks.get(stackNdx);
             if (isFrontStack(stack)) {
+            	Slog.i("resumeTopActivitiesLocked", "isFrontStack is "+stack.toString());
                 if (stack == targetStack) {
+                	Slog.i("resumeTopActivitiesLocked", "stack is equal to targetStack");
                     result = stack.resumeTopActivityLocked(target, targetOptions);
                 } else {
+                	Slog.i("resumeTopActivitiesLocked","stack is not equal!");
                     stack.resumeTopActivityLocked(null);
                 }
             }
@@ -2060,7 +2093,7 @@ public final class ActivityStackSupervisor {
             }
         }
     }
-
+    
     ActivityStack getStack(int stackId) {
         for (int stackNdx = mStacks.size() - 1; stackNdx >= 0; --stackNdx) {
             final ActivityStack stack = mStacks.get(stackNdx);
@@ -2070,7 +2103,7 @@ public final class ActivityStackSupervisor {
         }
         return null;
     }
-
+    //sbh default->public
     ArrayList<ActivityStack> getStacks() {
         return new ArrayList<ActivityStack>(mStacks);
     }
@@ -2266,7 +2299,6 @@ public final class ActivityStackSupervisor {
             stack.handleAppCrashLocked(app);
         }
     }
-
     void ensureActivitiesVisibleLocked(ActivityRecord starting, int configChanges) {
         // First the front stacks. In case any are not fullscreen and are in front of home.
         boolean showHomeBehindStack = false;
@@ -2595,8 +2627,8 @@ public final class ActivityStackSupervisor {
         removeSleepTimeouts();
         mHandler.sendEmptyMessageDelayed(SLEEP_TIMEOUT_MSG, SLEEP_TIMEOUT);
     }
-
-    private final class ActivityStackSupervisorHandler extends Handler {
+    //sbh modified -> default -> public
+    public final class ActivityStackSupervisorHandler extends Handler {
 
         public ActivityStackSupervisorHandler(Looper looper) {
             super(looper);
@@ -2659,7 +2691,18 @@ public final class ActivityStackSupervisor {
                         }
                     }
                 } break;
+                //sbh added
+                case REFRESH_STACK_STATE:
+                {
+                	ActivityRecord target = (ActivityRecord)msg.obj;
+                	pauseForReregisteration(target);
+                	break;
+                }
             }
         }
     }
+    //sbh added
+	public ActivityStackSupervisorHandler getmHandler() {
+		return mHandler;
+	}
 }

@@ -577,6 +577,7 @@ public class Instrumentation {
                     } else if (intent.getComponent() != null) {
                         cls = intent.getComponent().getClassName();
                     }
+                    Log.i("Instrumentation",cls);
                     if (cls == null || !mClass.equals(cls)) {
                         return false;
                     }

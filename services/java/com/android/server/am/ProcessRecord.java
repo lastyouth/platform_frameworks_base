@@ -55,6 +55,7 @@ final class ProcessRecord {
     // List of packages running in the process
     final ArrayMap<String, ProcessStats.ProcessState> pkgList
             = new ArrayMap<String, ProcessStats.ProcessState>();
+    //sbh
     IApplicationThread thread;  // the actual proc...  may be null only if
                                 // 'persistent' is true (in which case we
                                 // are in the process of launching the app)

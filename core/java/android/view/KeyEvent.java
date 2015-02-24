@@ -1288,7 +1288,8 @@ public class KeyEvent extends InputEvent implements Parcelable {
     private int mDeviceId;
     private int mSource;
     private int mMetaState;
-    private int mAction;
+    //sbh modified private -> public
+    public int mAction;
     private int mKeyCode;
     private int mScanCode;
     private int mRepeatCount;
