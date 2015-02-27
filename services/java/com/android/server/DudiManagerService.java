@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.hardware.display.WifiDisplayStatus;
 import android.hardware.input.InputManager;
 import android.os.Handler;
 import android.os.IBinder;
@@ -161,13 +162,11 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		{
 			return false;
 		}
-		// clear current target activity state ( RESUMED to STOPPED )
-		Message msg = Message.obtain();
-		msg.what = ActivityStackSupervisor.REFRESH_STACK_STATE;
-		msg.obj = mCurrentActivityRecord;
+		// clear current target activity state ( RESUMED to STOPPED 
 		
-		//mSupervisor.getmHandler().sendMessage(msg);
 		mSupervisor.pauseForReregisteration(mCurrentActivityRecord);
+		
+		mTargetTaskRecord.getStack().makeStopAndInvisible(mCurrentActivityRecord);
 		
 		// clear information
 		mCurrentActivityRecord = null;
@@ -413,11 +412,11 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 			{
 				if(realName.equals(mCurrentActivityRecord.getRealActivity()))
 				{
-					ActivityRecord tempR = mCurrentActivityRecord;
-					TaskRecord tempT = mTargetTaskRecord;
+					//ActivityRecord tempR = mCurrentActivityRecord;
+					//TaskRecord tempT = mTargetTaskRecord;
 					unregisterSavedInfo();
 					
-					tempT.getStack().makeStopAndInvisible(tempR);
+					//tempT.getStack().makeStopAndInvisible(tempR);
 					
 				}
 				return false;
@@ -471,6 +470,12 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 			return true;
 		}
 	}
+	// Current WifiDisplayStatus object
+	public void setCurrentWFDStatus(WifiDisplayStatus wfdstatus)
+	{
+		Log.d(TAG,"WifiDisplayStatus changed : "+wfdstatus);
+	}
+	
 	private class OurWorkerHandler extends Handler{
 		private static final int MESSAGE_SET = 0;
 		@Override

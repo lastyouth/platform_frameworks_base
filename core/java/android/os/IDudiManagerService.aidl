@@ -8,6 +8,7 @@ package android.os;
 
 import android.view.MotionEvent;
 import android.view.KeyEvent;
+import android.hardware.display.WifiDisplayStatus;
 
 interface IDudiManagerService{
 	boolean registerCurrentTopActivity();
@@ -30,5 +31,7 @@ interface IDudiManagerService{
 	// DudiFloatService
 	void bindWithFloatService();
 	void unbindWithFloatService();
+	// WifiDisplayStatus callback
+	void setCurrentWFDStatus(in WifiDisplayStatus wfdstatus);
 	
 }
