@@ -3851,7 +3851,7 @@ public final class ActivityStack {
 		return ret;
     }
     //sbh add
-    public void makeStopAndInvisible(ActivityRecord r)
+    public void makeStopAndInvisible(ActivityRecord r,boolean mustbedestroyed)
     {
     	if(r != null)
     	{
@@ -3866,7 +3866,10 @@ public final class ActivityStack {
 				}
             }
     		stopActivityLocked(r);
-    		destroyActivityLocked(r, true, false, "sbh!!");
+    		if(mustbedestroyed)
+    		{
+    			destroyActivityLocked(r, true, false, "sbh!!");
+    		}
     	}
     }
     public void makeVisible(ActivityRecord r)

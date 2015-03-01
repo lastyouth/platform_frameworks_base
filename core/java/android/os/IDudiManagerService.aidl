@@ -8,11 +8,10 @@ package android.os;
 
 import android.view.MotionEvent;
 import android.view.KeyEvent;
-import android.hardware.display.WifiDisplayStatus;
 
 interface IDudiManagerService{
 	boolean registerCurrentTopActivity();
-	boolean unregisterSavedInfo();
+	boolean unregisterSavedInfo(boolean mustbedestroyed);
 	String getCurrentRealActivityName();
 	String inquireSomething(String type);
 	boolean checkCurrentActivitySpecial(String realName,int taskid);
@@ -22,6 +21,7 @@ interface IDudiManagerService{
 	// input event injection
 	void sendCurrentActivityToTouchEvent(in MotionEvent event);
 	void sendCurrentActivityToKeyEvent(in KeyEvent event);
+	boolean sendBase64EncodedInputEvent(String encodedEvent);
 	// get window and input focus
 	boolean acquireInputFocus();
 	boolean releaseInputFocus();
@@ -32,6 +32,6 @@ interface IDudiManagerService{
 	void bindWithFloatService();
 	void unbindWithFloatService();
 	// WifiDisplayStatus callback
-	void setCurrentWFDStatus(in WifiDisplayStatus wfdstatus);
+	int getOverallWifiStatus();
 	
 }

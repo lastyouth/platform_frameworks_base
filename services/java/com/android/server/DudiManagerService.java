@@ -19,21 +19,26 @@ import com.android.server.wm.WindowState;
 
 import android.app.Activity;
 import android.app.Instrumentation;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.hardware.display.DisplayManager;
 import android.hardware.display.WifiDisplayStatus;
 import android.hardware.input.InputManager;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.IDudiFloatService;
 import android.util.Log;
+import android.util.Slog;
 import android.view.IApplicationToken;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -55,11 +60,20 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	private ActivityRecord current;
 	private boolean isAcquired;
 	
+	// For WifiDisplayStatus
+	private final DisplayManager mDisplayManagerService;
+	private WifiDisplayStatus mCurrentWifiDisplayStatus;
+	
+	// For WifiManager
+	private final WifiManager mWifiManager;
+	
 	// Informations
 	private TaskRecord mTargetTaskRecord; // Registered TaskRecord
 	private ActivityRecord mCurrentActivityRecord; // current
 	private Stack<ActivityRecord> mRegisteredActivityStack;
 	private boolean isRegistered; // if register
+	private final Object mLock = new Object();
+	private boolean unregistering;
 	
 	private static native void setTargetActivityName(String name);
 	
@@ -107,32 +121,66 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		//System.loadLibrary("android_servers");
 		//initializations
 		mContext = context;
+		// State of dudiFloatservice is false, when boot finished
 		mContext.getSharedPreferences("dudi", 0).edit().putBoolean("state", false).apply();
+		
+		
 		mWorker = new OurWorkerThread("DudiManagerServiceServiceWorker");
 		mWorker.start();
 		
+		// Get ActivityManagerService
 		mActivityManagerService = ActivityManagerService.self();
+		
+		// Get ActivityStackSupervisor
 		mSupervisor = mActivityManagerService.getSupervisor();
+		
+		// Get WindowManagerService
 		mWindowManagerService = mActivityManagerService.getWindowManagerService();
 		
+		// Get InputManagerService
 		mInputManagerService = mWindowManagerService.getInputManagerService();
 		
+		// Get InputMonitor
 		mInputMonitor = mWindowManagerService.getInputMonitor();
 		
+		// Get DisplayManagerService
+		mDisplayManagerService = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
+		
+		// Get WifiManager
+		
+		mWifiManager = (WifiManager)mContext.getSystemService(Context.WIFI_SERVICE);
+		
+		// This is stack for trace current registered activity.
 		mRegisteredActivityStack = new Stack<ActivityRecord>();
 		
+		// State of registeration
 		isRegistered = false;
+		
+		// Flag of unregisteration
+		unregistering = false;
+		
+		// State of acquiring input focus
 		isAcquired = false;
+		
+		// Initialize first state of WifiDisplayStatus
+		mCurrentWifiDisplayStatus = mDisplayManagerService.getWifiDisplayStatus();
+		
+		// BroadcastReceiver Activated
+		IntentFilter filter = new IntentFilter();
+        filter.addAction(DisplayManager.ACTION_WIFI_DISPLAY_STATUS_CHANGED);
+        filter.addAction("android.net.wifi.WIFI_STATE_CHANGED");
+        filter.addAction("android.net.wifi.STATE.CHANGE");
+        
+        mContext.registerReceiver(mReceiver, filter);
 
-		Log.i(TAG,"Spawned worker thread!!!");
-	
+		Log.i(TAG,"Spawned DudiManagerService thread!!!");
 	}
 	public boolean registerCurrentTopActivity()
 	{
 		if(isRegistered)
 		{
 			// if this, unregister for switching
-			unregisterSavedInfo();
+			unregisterSavedInfo(false);
 		}
 		ActivityRecord r = mSupervisor.topRunningActivityLocked();
 		
@@ -156,18 +204,20 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		mSupervisor.resumeHomeActivity(null);
 		return true;
 	}
-	public boolean unregisterSavedInfo()
+	public boolean unregisterSavedInfo(boolean mustbedestroyed)
 	{
 		if(!isRegistered)
 		{
 			return false;
 		}
 		// clear current target activity state ( RESUMED to STOPPED 
-		
+		synchronized(mLock)
+		{
+			unregistering = true;
+		}
+		mTargetTaskRecord.getStack().makeStopAndInvisible(mCurrentActivityRecord,mustbedestroyed);
 		mSupervisor.pauseForReregisteration(mCurrentActivityRecord);
-		
-		mTargetTaskRecord.getStack().makeStopAndInvisible(mCurrentActivityRecord);
-		
+		// makeStopAndInvisible must not be invoked.
 		// clear information
 		mCurrentActivityRecord = null;
 		setTargetActivityName("");
@@ -175,6 +225,10 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		isRegistered = false;
 		mRegisteredActivityStack.clear();
 		
+		synchronized(mLock)
+		{
+			unregistering = false;
+		}
 		return true;
 	}
 	public String getCurrentRealActivityName()
@@ -193,6 +247,14 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		{
 			// not registered, invalid
 			return false;
+		}
+		// this is for updating, new information or deleting
+		synchronized(mLock)
+		{
+			if(unregistering)
+			{
+				return false;
+			}
 		}
 		if(realName == null)
 		{
@@ -414,7 +476,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 				{
 					//ActivityRecord tempR = mCurrentActivityRecord;
 					//TaskRecord tempT = mTargetTaskRecord;
-					unregisterSavedInfo();
+					unregisterSavedInfo(true);
 					
 					//tempT.getStack().makeStopAndInvisible(tempR);
 					
@@ -470,11 +532,49 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 			return true;
 		}
 	}
-	// Current WifiDisplayStatus object
-	public void setCurrentWFDStatus(WifiDisplayStatus wfdstatus)
+	// Input Event from sink device
+	public boolean sendBase64EncodedInputEvent(String encodedEvent)
 	{
-		Log.d(TAG,"WifiDisplayStatus changed : "+wfdstatus);
+		//Log.d(TAG,"WifiDisplayStatus changed : "+wfdstatus);
+		return true;
 	}
+	public int getOverallWifiStatus()
+	{
+		// return overall wifi status by priority
+		int ret = 0x0;
+		
+		return ret;
+	}
+	
+	private void updateWifiStatus()
+	{
+		//Check Wifi status and notify to DudiFloatService
+		int wififlag = mWifiManager.getWifiState();
+		
+		
+		
+	}
+	
+	// Broadcast receiver for wifi relevant status
+	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(DisplayManager.ACTION_WIFI_DISPLAY_STATUS_CHANGED)) {
+            	mCurrentWifiDisplayStatus = mDisplayManagerService.getWifiDisplayStatus();
+            	
+            	Log.d(TAG,"WifiDisplayStatus changed : "+mCurrentWifiDisplayStatus);
+            	
+            }else if(action.equals("android.net.wifi.WIFI_STATE_CHANGED"))
+            {
+            	Log.d(TAG,"WIFI_STATE_CHANGED received");
+            }else if(action.equals("android.net.wifi.STATE_CHANGE"));
+            {
+            	Log.d(TAG,"STATE_CHANGED received");
+            }
+            updateWifiStatus();
+        }
+    };
 	
 	private class OurWorkerHandler extends Handler{
 		private static final int MESSAGE_SET = 0;

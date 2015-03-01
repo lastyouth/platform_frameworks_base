@@ -55,7 +55,7 @@ import java.util.HashSet;
 /**
  * An entry in the history stack, representing an activity.
  */
-public final class ActivityRecord {
+public final class ActivityRecord implements Cloneable{
     static final String TAG = ActivityManagerService.TAG;
     static final boolean DEBUG_SAVED_STATE = ActivityStackSupervisor.DEBUG_SAVED_STATE;
     final public static String RECENTS_PACKAGE_NAME = "com.android.systemui.recent";
