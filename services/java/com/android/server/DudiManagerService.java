@@ -535,7 +535,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	// Input Event from sink device
 	public boolean sendBase64EncodedInputEvent(String encodedEvent)
 	{
-		//Log.d(TAG,"WifiDisplayStatus changed : "+wfdstatus);
+		Log.d(TAG,"sendBase64EncodedInputEvent invoked : "+encodedEvent);
 		return true;
 	}
 	public int getOverallWifiStatus()
