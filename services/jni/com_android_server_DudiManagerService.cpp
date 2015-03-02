@@ -11,6 +11,7 @@
 #include <ui/Fence.h>
 #include <gui/ISurfaceComposer.h>
 #include <binder/IServiceManager.h>
+#include <dudilowmanagerservice/IDudiLowManagerService.h>
 
 
 namespace android{
@@ -47,9 +48,37 @@ namespace android{
 		(env)->ReleaseStringUTFChars(name,nativeString);
 	}
 
+	static jstring com_android_server_DudiManagerService_getEncodedInputEvent(JNIEnv* env, jobject obj)
+	{
+		jstring ret;// = env->NewStringUTF("Hello InputEvent");
+		
+		sp<IServiceManager> sm = defaultServiceManager();
+	
+		sp<IBinder> b;
+		
+		sp<IDudiLowManagerService> sDudiService;
+		
+		b = sm->getService(String16("DudiLowManagerService"));
+		
+		if(b == 0)
+		{
+			ALOGE("Cannot find DudiLowManagerService");
+			
+			ret = env->NewStringUTF("null");
+		}
 
+		
+		printf("DudiLowManagerService is found\n");
+		
+		sDudiService = interface_cast<IDudiLowManagerService>(b);
+		
+		String8 inputEvent = sDudiService->getEncodedInputEventInternal();
+		
+		return env->NewStringUTF(inputEvent.string());
+	}
 	static JNINativeMethod gMethods[] = {
-	    { "setTargetActivityName", "(Ljava/lang/String;)V", (void*) com_android_server_DudiManagerService_setTargetActivityName },};
+	    { "setTargetActivityName", "(Ljava/lang/String;)V", (void*) com_android_server_DudiManagerService_setTargetActivityName },
+		{"getEncodedInputEvent","()Ljava/lang/String;", (void*) com_android_server_DudiManagerService_getEncodedInputEvent},};
 
 	int register_android_server_DudiManagerService(JNIEnv* env) 
 	{

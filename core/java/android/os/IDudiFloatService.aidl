@@ -6,4 +6,5 @@ package android.os;
 
 interface IDudiFloatService{
 	void notifyCurrentTopActivityName(String name);
+	void notifyOverallWifiStatusChanged(int what);
 }

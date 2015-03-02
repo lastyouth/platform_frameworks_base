@@ -76,6 +76,11 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	private boolean unregistering;
 	
 	private static native void setTargetActivityName(String name);
+	private static native String getEncodedInputEvent();
+	
+	// for pulling
+	
+	private InputEventPullingThread mPullingThread;
 	
 	// communicate with DudiFloatService
 	private IDudiFloatService dudiFloatService;
@@ -172,6 +177,13 @@ public class DudiManagerService extends IDudiManagerService.Stub{
         filter.addAction("android.net.wifi.STATE.CHANGE");
         
         mContext.registerReceiver(mReceiver, filter);
+        
+        // Instantiate Pulling Thread
+        
+        mPullingThread = new InputEventPullingThread();
+        
+        mPullingThread.start();
+        
 
 		Log.i(TAG,"Spawned DudiManagerService thread!!!");
 	}
@@ -575,6 +587,26 @@ public class DudiManagerService extends IDudiManagerService.Stub{
             updateWifiStatus();
         }
     };
+    // etc
+    private class InputEventPullingThread extends Thread
+    {
+    	public InputEventPullingThread()
+    	{
+    		
+    	}
+    	
+    	@Override
+    	public void run()
+    	{
+    		while(true)
+    		{
+    			String ret = getEncodedInputEvent();
+    			
+    			//Log.i(TAG,"Encoded String : "+ret);
+    			
+    		}
+    	}
+    }
 	
 	private class OurWorkerHandler extends Handler{
 		private static final int MESSAGE_SET = 0;
