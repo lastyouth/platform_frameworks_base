@@ -602,7 +602,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
     		{
     			String ret = getEncodedInputEvent();
     			
-    			//Log.i(TAG,"Encoded String : "+ret);
+    			Log.i(TAG,"Encoded String : "+ret);
     			
     		}
     	}

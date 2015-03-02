@@ -751,7 +751,14 @@ public final class ActivityStack {
         //if(prev.packageName.equals(savedPackageName)&& !prev.finishing&&!uiSleeping)
         boolean bSpecialflag = false;
 		try {
-			bSpecialflag = mSysService.checkCurrentActivitySpecial(prev.getRealActivity(),prev.task.getTaskId());
+			if(mSysService == null)
+	        {
+	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+	        }
+			if(mSysService != null)
+			{
+				bSpecialflag = mSysService.checkCurrentActivitySpecial(prev.getRealActivity(),prev.task.getTaskId());
+			}
 		} catch (RemoteException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -1094,6 +1101,10 @@ public final class ActivityStack {
             	boolean bSpecialActivityFlag = false;
             	
             	try {
+            		if(mSysService == null)
+        	        {
+        	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+        	        }
             		if(mSysService != null)
             		{
             			bSpecialActivityFlag = mSysService.checkCurrentActivitySpecial(r.getRealActivity(),r.task.getTaskId());		
@@ -1378,6 +1389,10 @@ public final class ActivityStack {
         else
         {
         	//sbh
+        	if(mSysService == null)
+	        {
+	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+	        }
         	if(mSysService != null)
         	{
         		String nextActivity = next.getRealActivity();
@@ -1957,6 +1972,10 @@ public final class ActivityStack {
         //sbh
     	try
     	{
+    		if(mSysService == null)
+	        {
+	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+	        }
     		if(mSysService != null && r != null)
     		{
     			boolean flag = mSysService.notifyActivityChanged(r.getRealActivity(), false, newTask);
@@ -2368,7 +2387,14 @@ public final class ActivityStack {
     final void stopActivityLocked(ActivityRecord r) {
         boolean bIsSpecialFlag = false;
         try {
-			bIsSpecialFlag = mSysService.checkCurrentActivitySpecial(r.getRealActivity(),r.task.getTaskId());
+        	if(mSysService == null)
+	        {
+	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+	        }
+			if(mSysService != null)
+			{
+				bIsSpecialFlag = mSysService.checkCurrentActivitySpecial(r.getRealActivity(),r.task.getTaskId());
+			}
 		} catch (RemoteException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -2631,6 +2657,10 @@ public final class ActivityStack {
     	//sbh
     	try
     	{
+    		if(mSysService == null)
+	        {
+	        	mSysService = IDudiManagerService.Stub.asInterface(ServiceManager.getService("DudiManagerService"));
+	        }
     		if(mSysService != null && r != null)
     		{
     			boolean flag = mSysService.notifyActivityChanged(r.getRealActivity(), true, false);
