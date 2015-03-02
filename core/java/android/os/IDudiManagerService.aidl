@@ -34,4 +34,7 @@ interface IDudiManagerService{
 	// WifiDisplayStatus callback
 	int getOverallWifiStatus();
 	
+	// For WifiDisplay Connection
+	void activateConnectToSink();
+	
 }

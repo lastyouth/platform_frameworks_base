@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.hardware.display.DisplayManager;
+import android.hardware.display.WifiDisplay;
 import android.hardware.display.WifiDisplayStatus;
 import android.hardware.input.InputManager;
 import android.net.wifi.WifiManager;
@@ -466,6 +467,40 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		}
 		return ret;
 	}
+	private WifiDisplay findWifiDisplay(String deviceAddress) {
+		//mDisplayManagerService.
+		WifiDisplayStatus tempWds = mDisplayManagerService.getWifiDisplayStatus();
+		
+        if (tempWds != null && deviceAddress != null) {
+            for (WifiDisplay display : tempWds.getDisplays()) {
+            	Log.d(TAG,"Candidate Display : "+display);
+                if (display.getDeviceAddress().equals(deviceAddress)) {
+                    return display;
+                }
+            }
+        }
+        return null;
+    }
+	public void activateConnectToSink()
+	{
+		String deviceID = "fa:a9:d0:51:ab:14";
+		
+		WifiDisplay wd;
+		
+		do
+		{
+			wd = findWifiDisplay(deviceID);
+			
+			Log.d(TAG,"Target Display : "+wd);
+			
+		}while(wd == null);
+		
+		if(wd.canConnect())
+		{
+			mDisplayManagerService.connectWifiDisplay(wd.getDeviceAddress());
+		}
+	}
+	//
 	public boolean notifyActivityChanged(String realName, boolean isFinish,boolean isNew)
 	{
 		// update registered activity stack,
@@ -602,8 +637,10 @@ public class DudiManagerService extends IDudiManagerService.Stub{
     		{
     			String ret = getEncodedInputEvent();
     			
-    			Log.i(TAG,"Encoded String : "+ret);
-    			
+    			if(!ret.equals("null"))
+    			{
+    				Log.i(TAG,"Encoded String : "+ret);
+    			}
     		}
     	}
     }
