@@ -71,5 +71,11 @@ public class MotionEventWrapper implements Serializable{
 	public void setKeycode(int keycode) {
 		this.keycode = keycode;
 	}
-	
+	@Override
+	public String toString()
+	{
+		String ret = String.format("type : %d , keycode : %d, action : %d , X : %f Y : %f" , type,keycode,action,X,Y);
+		
+		return ret;
+	}
 }

@@ -1,6 +1,8 @@
 package com.android.server;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import com.android.server.wm.AppWindowToken;
 import com.android.server.wm.InputMonitor;
 import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowState;
+import com.example.mira4u.MotionEventWrapper;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -38,6 +41,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.IDudiFloatService;
+import android.util.Base64;
 import android.util.Log;
 import android.util.Slog;
 import android.view.IApplicationToken;
@@ -58,7 +62,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	private final WindowManagerService mWindowManagerService;
 	private final InputManagerService mInputManagerService;
 	private final InputMonitor mInputMonitor;
-	private ActivityRecord current;
+	private ActivityRecord mCurrentInputFocusedActivity;
 	private boolean isAcquired;
 	
 	// For WifiDisplayStatus
@@ -86,7 +90,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	// communicate with DudiFloatService
 	private IDudiFloatService dudiFloatService;
 	
-	ServiceConnection dudiFloatConnection = new ServiceConnection()
+	private ServiceConnection dudiFloatConnection = new ServiceConnection()
 	{
 
 		@Override
@@ -114,6 +118,8 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	
 	public void unbindWithFloatService()
 	{
+		// unregister must be preceed;
+		unregisterSavedInfo(false);
 		mContext.unbindService(dudiFloatConnection);
 		dudiFloatService = null;
 		Log.e(TAG,"dudiFloatService is unbinded");
@@ -190,17 +196,24 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	}
 	public boolean registerCurrentTopActivity()
 	{
+		ActivityRecord r = mSupervisor.topRunningActivityLocked();
+		if(r.getRealActivity().contains("launcher3"))
+		{
+			return false;
+		}
+		
 		if(isRegistered)
 		{
 			// if this, unregister for switching
 			unregisterSavedInfo(false);
 		}
-		ActivityRecord r = mSupervisor.topRunningActivityLocked();
 		
 		if(r == null)
 		{
 			return false;
 		}
+		// prevent register launcher app
+		
 		mCurrentActivityRecord = r;
 		setTargetActivityName(mCurrentActivityRecord.getRealActivity());
 		mTargetTaskRecord = r.getTask();
@@ -284,6 +297,14 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 	}
 	public void topmostActivityChanged(String name)
 	{
+		/*if(isRegistered)
+		{
+			if(mCurrentActivityRecord.getRealActivity().equals(name))
+			{
+				// prevent make foreground current registered activity
+				mSupervisor.resumeHomeActivity(null);
+			}
+		}*/
 		// this method is called by ActivityStack.resumTopActivityLocked
 		// param is Current Topmost real activity name
 		try
@@ -350,14 +371,14 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		// just acquire application and input focus
 		if(!isAcquired)
 		{
-			current = mSupervisor.topRunningActivityLocked();
+			mCurrentInputFocusedActivity = mSupervisor.topRunningActivityLocked();
 		
 			if(mCurrentActivityRecord == null)
 			{
 				return;
 			}
 			// registered activity and actual activity are same
-			if(mCurrentActivityRecord == current)
+			if(mCurrentActivityRecord == mCurrentInputFocusedActivity)
 			{
 				return;
 			}
@@ -393,7 +414,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 			return false;
 		}
 		
-		current = mSupervisor.topRunningActivityLocked();
+		mCurrentInputFocusedActivity = mSupervisor.topRunningActivityLocked();
 		
 		if(mCurrentActivityRecord == null)
 		{
@@ -401,7 +422,7 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		}
 		// registered activity and actual activity are same
 		
-		if(mCurrentActivityRecord == current)
+		if(mCurrentActivityRecord == mCurrentInputFocusedActivity)
 		{
 			return false;
 		}
@@ -433,10 +454,10 @@ public class DudiManagerService extends IDudiManagerService.Stub{
 		{
 			return false;
 		}
-		WindowState originalWindow = mWindowManagerService.findAppWindowToken(current.getAppToken().asBinder()).findMainWindow();
-		mActivityManagerService.sbhSetFocusedActivityLocked(current,originalWindow);
+		WindowState originalWindow = mWindowManagerService.findAppWindowToken(mCurrentInputFocusedActivity.getAppToken().asBinder()).findMainWindow();
+		mActivityManagerService.sbhSetFocusedActivityLocked(mCurrentInputFocusedActivity,originalWindow);
 		
-		current = null;
+		mCurrentInputFocusedActivity = null;
 		isAcquired = false;
 		Log.e("WindowManager","releaseSuccess");
 		return true;
@@ -640,6 +661,118 @@ public class DudiManagerService extends IDudiManagerService.Stub{
     			if(!ret.equals("null"))
     			{
     				Log.i(TAG,"Encoded String : "+ret);
+    				
+    				ret = ret.substring(0,ret.indexOf("@@@"));
+    				
+    				Log.d(TAG,"Verified String : "+ret);
+    				
+    				
+    				
+    				try
+    				{
+    					byte[] encoded = Base64.decode(ret, Base64.NO_WRAP);
+        				
+        				Log.i(TAG,"Decoded byte array : "+encoded);
+        				
+    					ByteArrayInputStream inByteStream;
+    					ObjectInput objinStream;
+    					
+    					inByteStream = new ByteArrayInputStream(encoded);
+    					objinStream = new ObjectInputStream(inByteStream);
+    						
+    					MotionEventWrapper p = (MotionEventWrapper)objinStream.readObject();
+    					
+    					Log.i(TAG,"Object : "+p.toString());
+    					
+    					int type = p.getType();
+    					
+    					if(type == MotionEventWrapper.TYPE_KEY)
+    					{
+    						int keycode = p.getKeycode();
+    						
+    						if(keycode == KeyEvent.KEYCODE_BACK)
+    						{
+    							Log.i(TAG,"Back Key Event Arrived");
+    							KeyEvent backKeyDownEvent = new KeyEvent(SystemClock.uptimeMillis(),SystemClock.uptimeMillis(),
+    									KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_BACK,0,0,-1,0,0x48,0x101);
+    							sendCurrentActivityToKeyEvent(backKeyDownEvent);
+    						}else if(keycode == KeyEvent.KEYCODE_MENU)
+    						{
+    							Log.i(TAG,"Home Key Event Arrived");
+    							int taskid = mCurrentActivityRecord.getTask().getTaskId();
+    							
+    							registerCurrentTopActivity();
+    							
+    							mActivityManagerService.moveTaskToFront(taskid, 0, null);
+    							
+    						}else if(keycode == KeyEvent.KEYCODE_HOME)
+    						{
+    							unregisterSavedInfo(true);
+    							Log.i(TAG,"Menu Key Event Arrived");
+    						}
+    						else
+    						{
+    							Log.e(TAG,"Unexpected Key Layout");
+    						}
+    						
+    					}else if(type == MotionEventWrapper.TYPE_MOTION)
+    					{
+    						Log.i(TAG,"Motion Event Arrived");
+    						//MotionEvent me = MotionEvent.obtain(System.currentTimeMillis(),System.currentTimeMillis(),p.getAction(),p.getX(),p.getY(),p.getMetaData());
+    						MotionEvent.PointerCoords[] pc = MotionEvent.PointerCoords.createArray(1);
+    						MotionEvent.PointerProperties[] pp = MotionEvent.PointerProperties.createArray(1);
+    						
+    						pc[0].clear();
+    						
+    						pc[0].x = p.getX();
+    						pc[0].y = p.getY();
+    						pc[0].pressure = MotionEvent.AXIS_PRESSURE;
+    						pc[0].size = MotionEvent.AXIS_SIZE;
+    						
+    						pp[0].clear();
+    						pp[0].id = 4;
+    						pp[0].toolType = MotionEvent.TOOL_TYPE_FINGER;
+    						
+    						MotionEvent event = MotionEvent.obtain(android.os.SystemClock.uptimeMillis(),
+    								android.os.SystemClock.uptimeMillis(),
+    								p.getAction(),
+    								1,
+    								pp,
+    								pc,
+    								0,
+    								0,
+    								(float)p.getX(),(float)p.getY(),4,0,0x1002,0);	
+    						sendCurrentActivityToTouchEvent(event);
+    						//sendCurrentActivityToTouchEvent(me);
+    					}
+    					else
+    					{
+    						// unexpected;
+    						Log.e(TAG,"unexpected object from sink");
+    					}
+
+    					//recovered = MotionEvent.obtain(System.currentTimeMillis(),System.currentTimeMillis(),p.getAction(),p.getX(),p.getY(),p.getMetaData());
+    					
+    					//Log.e(TAG,"RECOVERED : "+recovered);
+    				}catch(IOException ee)
+    				{
+    					//Log.e(TAG,"Exception : "+ee.p);
+    					ee.printStackTrace();
+    				}catch(Exception e)
+    				{
+    					//Log.e(TAG,"Exception : "+e.getMessage());
+    					e.printStackTrace();
+    				}
+    				
+    			}
+    			else
+    			{
+    				try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
     			}
     		}
     	}
